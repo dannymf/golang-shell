@@ -88,3 +88,19 @@ func checkRedirectsOrder(args []string) ([]int, error) {
 	}
 	return []int{int1, int2}, nil
 }
+
+func ContainsMultipleRedirects(lexed []Pair) error {
+	stdinRedirect := false
+	stdoutRedirect := false
+
+	for _, pair := range lexed {
+		if pair.token == "<" && !stdinRedirect {
+			stdinRedirect = true
+		} else if pair.token == ">" && !stdoutRedirect {
+			stdoutRedirect = true
+		} else if (pair.token == "<" && stdinRedirect) || (pair.token == ">" && stdoutRedirect) {
+			return errors.New("multiple redirects of same type")
+		}
+	}
+	return nil
+}
