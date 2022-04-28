@@ -32,13 +32,27 @@ func MainLoop() {
 		input = strings.TrimSuffix(input, "\n")
 
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
+			fmt.Fprintln(os.Stderr, "ERROR:", err)
+			continue
 		}
 
 		// Handle the execution of the input.
-		// if err = execInput(input); err != nil {
-		// 	fmt.Fprintln(os.Stderr, err)
-		// }
+		lexed, err := Lexer(input)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "ERROR:", err)
+			continue
+		}
+
+		parsed, err := Parser(lexed)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "ERROR:", err)
+			continue
+		}
+
+		if err = execCommand(parsed); err != nil {
+			fmt.Fprintln(os.Stderr, "ERROR:", err)
+			continue
+		}
 	}
 }
 
@@ -139,6 +153,78 @@ func Parser(lexed *[]Pair) (parsed2 *[]Pair, err error) {
 	return parsed, nil
 }
 
+func execCommand(parsed *[]Pair) error {
+	// Get command string
+
+	if len(*parsed) == 0 {
+		return nil
+	}
+
+	command := (*parsed)[0].token
+
+	// Handle built in commands
+	switch command {
+	case "cd":
+
+		if len(*parsed) < 2 {
+			return os.Chdir(os.Getenv("HOME"))
+		}
+		return os.Chdir((*parsed)[1].token)
+
+	case "exit":
+		os.Exit(0)
+
+	case "quit":
+		os.Exit(0)
+	}
+
+	// Get arguments from parsed
+	args := make([]string, 0)
+	for _, pair := range *parsed {
+		if pair.tokenType == "ARGUMENT" {
+			args = append(args, pair.token)
+		}
+	}
+
+	var cmd *exec.Cmd
+
+	if len(args) > 0 {
+		cmd = exec.Command(command, args...)
+	} else {
+		cmd = exec.Command(command)
+	}
+
+	// Set the default output device-- DEFAULT
+	cmd.Stderr = os.Stderr
+	cmd.Stdout = os.Stdout
+
+	// Check if parsed has redirects
+	if len(*parsed) > 1 {
+		for idx, pair := range *parsed {
+			if pair.tokenType == "STDIN-REDIRECT" {
+				redirectFile, err := os.Open((*parsed)[idx+1].token)
+				if err != nil {
+					return err
+				}
+				cmd.Stdin = redirectFile
+				defer redirectFile.Close()
+			} else if pair.tokenType == "STDOUT-REDIRECT" {
+				redirectFile, err := os.Create((*parsed)[idx+1].token)
+				if err != nil {
+					return err
+				}
+				cmd.Stdout = redirectFile
+				defer redirectFile.Close()
+			}
+		}
+	}
+	// Run command with args
+	if err := cmd.Run(); err != nil {
+		return err
+	}
+	return nil
+}
+
 func HandleStartState(pair Pair) error {
 
 	*parsed = append(*parsed, Pair{pair.token, "COMMAND"})
@@ -212,125 +298,5 @@ func HandleFileInputState(pair Pair) error {
 	} else {
 		return errors.New("invalid next token")
 	}
-	return nil
-}
-
-// func execInput(input string) error {
-// 	// Remove the newline character.
-
-// 	// Split the input separate the command and the arguments.
-// 	command, args, err := Lexer(input)
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	// Check for built-in commands.
-// 	switch command {
-// 	case "cd":
-
-// 		if len(args) == 0 || args[0] == "" {
-// 			return os.Chdir(os.Getenv("HOME"))
-// 		}
-// 		return os.Chdir(args[1])
-
-// 	case "exit":
-// 		os.Exit(0)
-
-// 	case "quit":
-// 		os.Exit(0)
-// 	}
-
-// 	// Check if command is valid
-// 	if err := IsValidCmd(command); err != nil {
-// 		return err
-// 	}
-
-//
-
-// // Check if command contains redirects in proper order
-// if indices, err := checkRedirectsOrder(args); err != nil {
-// 	return err
-// }
-
-// Check if command contains pipes
-// if containsPipe(args) {
-// 	return errors.New("invalid command")
-// }
-
-// Prepare the command to execute.
-// 	cmd := exec.Command(command, args[0:]...)
-
-// 	// Set the correct output device-- DEFAULT
-// 	cmd.Stderr = os.Stderr
-// 	cmd.Stdout = os.Stdout
-
-// 	// Check for redirects.
-// 	if len(args) > 0 && (Contains(args, ">") || Contains(args, "<")) {
-// 		// Check for stdout redirect.
-// 		stdinContains, stdinIdx, stdinErr := ContainsRedirect(args, ">")
-// 		if stdinErr != nil {
-// 			return stdinErr
-// 		}
-// 		if stdinContains {
-// 			// Open the file for writing.
-// 			stdinErr = handleStdoutRedirect(args[stdinIdx+1], cmd)
-
-// 			if stdinErr != nil {
-// 				return stdinErr
-// 			}
-// 		}
-
-// 		stdoutContains, stdoutIdx, stdoutErr := ContainsRedirect(args, "<")
-// 		if stdoutErr != nil {
-// 			return stdoutErr
-// 		}
-// 		if stdoutContains {
-// 			// Open the file for writing.
-// 			stdoutErr = handleStdinRedirect(args[stdoutIdx+1], cmd)
-
-// 			if stdoutErr != nil {
-// 				return stdoutErr
-// 			}
-// 		}
-
-// 		// Execute the command and return the error.
-
-// 	} else {
-// 		return cmd.Run()
-// 	}
-// 	return nil
-// }
-
-func handleStdoutRedirect(filename string, cmd *exec.Cmd) error {
-	// open the out file for writing
-	outfile, err := os.Create(filename)
-	if err != nil {
-		return err
-	}
-	defer outfile.Close()
-	cmd.Stdout = outfile
-
-	err = cmd.Start()
-	if err != nil {
-		return err
-	}
-	cmd.Wait()
-	return nil
-}
-
-func handleStdinRedirect(filename string, cmd *exec.Cmd) error {
-	// open the out file for writing
-	infile, err := os.Open(filename)
-	if err != nil {
-		return err
-	}
-	defer infile.Close()
-	cmd.Stdin = infile
-
-	err = cmd.Start()
-	if err != nil {
-		return err
-	}
-	cmd.Wait()
 	return nil
 }

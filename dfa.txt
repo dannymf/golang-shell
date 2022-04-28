@@ -9,7 +9,7 @@ ARG (accept)
     STDOUT-REDIRECT: FILE-INPUT
 
 FILE-INPUT (reject)
-    REGUKAR: ARG
+    REGULAR: ARG
     STDIN-REDIRECT: throw error
     STDOUT-REDIRECT: throw error
 

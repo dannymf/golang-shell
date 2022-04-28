@@ -14,3 +14,5 @@ First split on pipe, THEN check whether theres multiple redirects bc you can the
 Do I need to use goroutines/channels?
 
 First I will implement without pipes
+
+Does NOT allow multiple redirects

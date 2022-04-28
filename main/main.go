@@ -1,13 +1,9 @@
 package main
 
 import (
-	"fmt"
-	"os/exec"
+	shell "shell/shell"
 )
 
 func main() {
-	// shell.MainLoop()
-	if err := exec.Command("<").Run(); err != nil {
-		fmt.Println(err)
-	}
+	shell.MainLoop()
 }
