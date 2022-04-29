@@ -48,7 +48,7 @@ func IsOrdinaryToken(r rune) bool {
 }
 
 func IsValidToken(r rune) bool {
-	return r != '|' && r != '&' && r != ';' && r != '(' && r != ')'
+	return r != '&' && r != ';' && r != '(' && r != ')'
 	// && r != '\'' && r != '"' && r != ' '
 }
 
@@ -63,7 +63,7 @@ func IsOrdinaryString(s string) bool {
 }
 
 func IsValidCmd(s string) error {
-	if s == "" || s == " " || s == "<" || s == ">" || s == "|" || s == "&" || s == ";" || s == "(" || s == ")" {
+	if s == "" || s == " " || s == "<" || s == ">" || s == "&" || s == ";" || s == "(" || s == ")" {
 		return errors.New("invalid command")
 	}
 	return nil
@@ -103,4 +103,21 @@ func ContainsMultipleRedirects(lexed []Pair) error {
 		}
 	}
 	return nil
+}
+
+func ContainsMultiplePipes(lexed []Pair) error {
+	pipeCount := false
+
+	for _, pair := range lexed {
+		if pair.token == "|" && !pipeCount {
+			pipeCount = true
+		} else if pair.token == "|" && pipeCount {
+			return errors.New("multiple pipes")
+		}
+	}
+	return nil
+}
+
+func RunPipeCommand() {
+
 }

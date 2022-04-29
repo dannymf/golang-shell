@@ -12,7 +12,3 @@ FILE-INPUT (reject)
     REGULAR: ARG
     STDIN-REDIRECT: throw error
     STDOUT-REDIRECT: throw error
-
-
-
-

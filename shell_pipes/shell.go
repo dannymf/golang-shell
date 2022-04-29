@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"strings"
@@ -30,7 +29,8 @@ func MainLoop() {
 		fmt.Print("% ")
 		// Read the keyboad input.
 		input, err := reader.ReadString('\n')
-		input = strings.TrimSuffix(input, "\n")
+		// input = strings.TrimSuffix(input, "\n")
+		input = strings.TrimSpace(input)
 
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "ERROR:", err)
@@ -96,6 +96,8 @@ func Lexer(input string) (*[]Pair, error) {
 			*lexed = append(*lexed, Pair{s, "STDIN-REDIRECT"})
 		} else if s == ">" {
 			*lexed = append(*lexed, Pair{s, "STDOUT-REDIRECT"})
+		} else if s == "|" {
+			*lexed = append(*lexed, Pair{s, "PIPE"})
 		} else {
 			*lexed = append(*lexed, Pair{s, "NORMAL"})
 		}
@@ -110,6 +112,9 @@ func Parser(lexed *[]Pair) (parsed2 *[]Pair, err error) {
 	state = "START"
 
 	if err := ContainsMultipleRedirects(*lexed); err != nil {
+		return nil, err
+	}
+	if err := ContainsMultiplePipes(*lexed); err != nil {
 		return nil, err
 	}
 
@@ -302,15 +307,15 @@ func HandleFileInputState(pair Pair) error {
 	return nil
 }
 
-func pipeTest() {
-	pr, pw := io.Pipe()
-	go func() {
-		pw.Write([]byte("hello"))
-		defer pw.Close()
-	}
-	var buf bytes.Buffer
-	io.Copy(&buf, pr)
+// func pipeTest() {
+// 	pr, pw := io.Pipe()
+// 	go func() {
+// 		pw.Write([]byte("hello"))
+// 		defer pw.Close()
+// 	}
+// 	var buf bytes.Buffer
+// 	io.Copy(&buf, pr)
 
-	fmt.Println(buf.String())
+// 	fmt.Println(buf.String())
 
-}
+// }

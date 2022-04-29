@@ -171,10 +171,7 @@ func execCommand(parsed *[]Pair) error {
 		}
 		return os.Chdir((*parsed)[1].token)
 
-	case "exit":
-		os.Exit(0)
-
-	case "quit":
+	case "exit", "quit":
 		os.Exit(0)
 	}
 
@@ -223,6 +220,60 @@ func execCommand(parsed *[]Pair) error {
 		return err
 	}
 	return nil
+}
+
+// For testing purposes
+// Does NOT handle cd or exit
+func ReturnCommand(parsed *[]Pair) (*exec.Cmd, error) {
+
+	if len(*parsed) == 0 {
+		return nil, nil
+	}
+
+	command := (*parsed)[0].token
+
+	// Get arguments from parsed
+	args := make([]string, 0)
+	for _, pair := range *parsed {
+		if pair.tokenType == "ARGUMENT" {
+			args = append(args, pair.token)
+		}
+	}
+
+	var cmd *exec.Cmd
+
+	if len(args) > 0 {
+		cmd = exec.Command(command, args...)
+	} else {
+		cmd = exec.Command(command)
+	}
+
+	// Set the default output device-- DEFAULT
+	cmd.Stderr = os.Stderr
+	// cmd.Stdout = os.Stdout
+
+	// Check if parsed has redirects
+	if len(*parsed) > 1 {
+		for idx, pair := range *parsed {
+			if pair.tokenType == "STDIN-REDIRECT" {
+				redirectFile, err := os.Open((*parsed)[idx+1].token)
+				if err != nil {
+					return nil, err
+				}
+				cmd.Stdin = redirectFile
+				defer redirectFile.Close()
+			} else if pair.tokenType == "STDOUT-REDIRECT" {
+				redirectFile, err := os.Create((*parsed)[idx+1].token)
+				if err != nil {
+					return nil, err
+				}
+				cmd.Stdout = redirectFile
+				defer redirectFile.Close()
+			}
+		}
+	}
+	// Run command with args
+	return cmd, nil
 }
 
 func HandleStartState(pair Pair) error {
