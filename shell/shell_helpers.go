@@ -1,34 +1,10 @@
 package shell
 
-import "errors"
-
-// throw error if contains multiple redirect tokens
-func Contains(haystack []string, needle string) bool {
-	for _, element := range haystack {
-		if element == needle {
-			return true
-		}
-	}
-	return false
-}
-
-func ContainsRedirect(haystack []string, redirect string) (bool, int, error) {
-	contained := false
-	index := -1
-
-	for idx, element := range haystack {
-		if element == redirect && !contained {
-			contained = true
-			index = idx
-		} else if element == redirect && contained {
-			return false, -1, errors.New("multiple redirect tokens")
-		}
-	}
-	if contained {
-		return true, index, nil
-	}
-	return false, -1, nil
-}
+import (
+	"errors"
+	"os"
+	"os/exec"
+)
 
 func ContainsPipe(haystack []string) (bool, []int) {
 	var indices []int = make([]int, 0)
@@ -43,50 +19,9 @@ func ContainsPipe(haystack []string) (bool, []int) {
 	return found, indices
 }
 
-func IsOrdinaryToken(r rune) bool {
-	return r != '<' && r != '>' && r != '|' && r != '&' && r != ';' && r != '(' && r != ')'
-}
-
 func IsValidToken(r rune) bool {
 	return r != '|' && r != '&' && r != ';' && r != '(' && r != ')'
 	// && r != '\'' && r != '"' && r != ' '
-}
-
-func IsOrdinaryString(s string) bool {
-	for _, r := range s {
-		if !IsOrdinaryToken(r) {
-			return false
-		}
-
-	}
-	return true
-}
-
-func IsValidCmd(s string) error {
-	if s == "" || s == " " || s == "<" || s == ">" || s == "|" || s == "&" || s == ";" || s == "(" || s == ")" {
-		return errors.New("invalid command")
-	}
-	return nil
-}
-
-// Check is > before <
-// Returns true if > is before < and returns location of indices
-func checkRedirectsOrder(args []string) ([]int, error) {
-
-	bool1, int1, err1 := ContainsRedirect(args, "<")
-	bool2, int2, err2 := ContainsRedirect(args, ">")
-
-	if err1 != nil || err2 != nil {
-		return nil, errors.New("invalid redirect")
-	}
-
-	if bool1 && bool2 {
-		if int1 > int2 {
-			return nil, errors.New("invalid redirect")
-		}
-
-	}
-	return []int{int1, int2}, nil
 }
 
 func ContainsMultipleRedirects(lexed []Pair) error {
@@ -103,4 +38,58 @@ func ContainsMultipleRedirects(lexed []Pair) error {
 		}
 	}
 	return nil
+}
+
+// For testing purposes
+// Does NOT handle cd or exit
+func ReturnCommand(parsed *[]Pair) (*exec.Cmd, error) {
+
+	if len(*parsed) == 0 {
+		return nil, nil
+	}
+
+	command := (*parsed)[0].token
+
+	// Get arguments from parsed
+	args := make([]string, 0)
+	for _, pair := range *parsed {
+		if pair.tokenType == "ARGUMENT" {
+			args = append(args, pair.token)
+		}
+	}
+
+	var cmd *exec.Cmd
+
+	if len(args) > 0 {
+		cmd = exec.Command(command, args...)
+	} else {
+		cmd = exec.Command(command)
+	}
+
+	// Set the default output device-- DEFAULT
+	cmd.Stderr = os.Stderr
+	// cmd.Stdout = os.Stdout
+
+	// Check if parsed has redirects
+	if len(*parsed) > 1 {
+		for idx, pair := range *parsed {
+			if pair.tokenType == "STDIN-REDIRECT" {
+				redirectFile, err := os.Open((*parsed)[idx+1].token)
+				if err != nil {
+					return nil, err
+				}
+				cmd.Stdin = redirectFile
+				defer redirectFile.Close()
+			} else if pair.tokenType == "STDOUT-REDIRECT" {
+				redirectFile, err := os.Create((*parsed)[idx+1].token)
+				if err != nil {
+					return nil, err
+				}
+				cmd.Stdout = redirectFile
+				defer redirectFile.Close()
+			}
+		}
+	}
+	// Run command with args
+	return cmd, nil
 }

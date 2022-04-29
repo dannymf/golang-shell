@@ -9,19 +9,9 @@ import (
 	"strings"
 )
 
-// func RunShell(cmd string) (string, error) {
-// 	return "", nil
-// }
-
 type Pair struct {
 	token, tokenType string
 }
-
-var lexed *[]Pair = &[]Pair{}
-var parsed *[]Pair = &[]Pair{}
-var state string = "START"
-
-// var ErrNoPath = errors.New("path required")
 
 func MainLoop() {
 	reader := bufio.NewReader(os.Stdin)
@@ -29,8 +19,7 @@ func MainLoop() {
 		fmt.Print("% ")
 		// Read the keyboad input.
 		input, err := reader.ReadString('\n')
-		// input = strings.TrimSuffix(input, "\n")
-		input = strings.TrimSpace(input)
+		input = strings.TrimSuffix(input, "\n")
 
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "ERROR:", err)
@@ -60,7 +49,7 @@ func MainLoop() {
 func Lexer(input string) (*[]Pair, error) {
 	// Split the input separate the command and the arguments.
 	// Return the command and the arguments.
-	lexed = &[]Pair{}
+	var lexed *[]Pair = &[]Pair{}
 	*lexed = make([]Pair, 0)
 
 	a := []string{}
@@ -92,12 +81,8 @@ func Lexer(input string) (*[]Pair, error) {
 	// }
 
 	for _, s := range a {
-		if s == "<" {
-			*lexed = append(*lexed, Pair{s, "STDIN-REDIRECT"})
-		} else if s == ">" {
-			*lexed = append(*lexed, Pair{s, "STDOUT-REDIRECT"})
-		} else if s == "|" {
-			*lexed = append(*lexed, Pair{s, "PIPE"})
+		if s == "|" {
+			*lexed = append(*lexed, Pair{token: s, tokenType: "PIPE"})
 		} else {
 			*lexed = append(*lexed, Pair{s, "NORMAL"})
 		}
@@ -106,61 +91,39 @@ func Lexer(input string) (*[]Pair, error) {
 	return lexed, nil
 }
 
-func Parser(lexed *[]Pair) (parsed2 *[]Pair, err error) {
-	// Check for incorrect order of redirects
+// Parse the command and arguments into a list of tokens.
+func Parser(lexed *[]Pair) (*[]Pair, error) {
+
+	var parsed *[]Pair = &[]Pair{}
 	*parsed = make([]Pair, 0)
-	state = "START"
+	state := "START"
+	var err error
 
-	if err := ContainsMultipleRedirects(*lexed); err != nil {
-		return nil, err
-	}
-	if err := ContainsMultiplePipes(*lexed); err != nil {
-		return nil, err
-	}
-
-	// fmt.Println("LEXED", *lexed)
 	// Insert DFA here
 	for _, pair := range *lexed {
 		switch state {
 		case "START":
-			// fmt.Println("START")
-			if err := HandleStartState(pair); err != nil {
+			parsed, state, err = HandleStartState(parsed, pair, state)
+			if err != nil {
 				return nil, err
 			}
 		case "ARGUMENTS":
-			// fmt.Println("ARGUMENTS")
-			if err := HandleArgumentsState(pair); err != nil {
+			parsed, state, err = HandleArgumentsState(parsed, pair, state)
+			if err != nil {
 				return nil, err
 			}
-		case "STDIN-REDIRECT":
-			// fmt.Println("STDIN-REDIRECT")
-			if err := HandleStdinRedirectState(pair); err != nil {
-				return nil, err
-			}
-		case "STDOUT-REDIRECT":
-			// fmt.Println("STDOUT-REDIRECT")
-			if err := HandleStdoutRedirectState(pair); err != nil {
-				return nil, err
-			}
-		case "FILE-INPUT":
-			// fmt.Println("FILE-INPUT")
-			if err := HandleFileInputState(pair); err != nil {
+		case "PIPE":
+			parsed, state, err = HandlePipeState(parsed, pair, state)
+			if err != nil {
 				return nil, err
 			}
 		}
-		// fmt.Println("PARSED LOOP: ", parsed)
 	}
 
-	if state == "STDOUT-REDIRECT" || state == "STDIN-REDIRECT" {
-		return nil, errors.New("cannot end command with redirect")
-	}
-
-	// fmt.Println("PARSED POST: ", parsed)
 	return parsed, nil
 }
 
 func execCommand(parsed *[]Pair) error {
-	// Get command string
 
 	if len(*parsed) == 0 {
 		return nil
@@ -177,10 +140,7 @@ func execCommand(parsed *[]Pair) error {
 		}
 		return os.Chdir((*parsed)[1].token)
 
-	case "exit":
-		os.Exit(0)
-
-	case "quit":
+	case "exit", "quit":
 		os.Exit(0)
 	}
 
@@ -230,92 +190,3 @@ func execCommand(parsed *[]Pair) error {
 	}
 	return nil
 }
-
-func HandleStartState(pair Pair) error {
-
-	*parsed = append(*parsed, Pair{pair.token, "COMMAND"})
-	// fmt.Println("PARSED: ", parsed)
-
-	if pair.tokenType == "NORMAL" {
-		state = "ARGUMENTS"
-	} else if pair.tokenType == "STDIN-REDIRECT" {
-		return errors.New("cannot have stdin redirect in start state")
-	} else if pair.tokenType == "STDOUT-REDIRECT" {
-		return errors.New("cannot have stdout redirect in start state")
-	} else {
-		return errors.New("invalid next token")
-	}
-	return nil
-}
-
-func HandleArgumentsState(pair Pair) error {
-
-	if pair.tokenType == "NORMAL" {
-		*parsed = append(*parsed, Pair{pair.token, "ARGUMENT"})
-		state = "ARGUMENTS" //redundant
-	} else if pair.tokenType == "STDIN-REDIRECT" {
-		*parsed = append(*parsed, Pair{pair.token, "STDIN-REDIRECT"})
-		state = "STDIN-REDIRECT"
-	} else if pair.tokenType == "STDOUT-REDIRECT" {
-		*parsed = append(*parsed, Pair{pair.token, "STDOUT-REDIRECT"})
-		state = "STDOUT-REDIRECT"
-	} else {
-		return errors.New("invalid next token")
-	}
-	// fmt.Println("PARSED: ", parsed)
-	return nil
-
-}
-
-func HandleStdoutRedirectState(pair Pair) error {
-	// We already checked for multiple redirects of same kind
-	// fmt.Println("HANDLE STDOUT REDIRECT")
-	if pair.tokenType == "STDIN-REDIRECT" {
-		return errors.New("cannot have stdin redirect in stdout redirect state")
-	} else if pair.tokenType == "NORMAL" {
-		*parsed = append(*parsed, Pair{pair.token, "FILE-INPUT"})
-		state = "FILE-INPUT"
-	}
-	return nil
-}
-
-func HandleStdinRedirectState(pair Pair) error {
-	// We already checked for multiple redirects of same kind
-	// fmt.Println("HANDLE STDIN REDIRECT")
-	if pair.tokenType == "STDOUT-REDIRECT" {
-		return errors.New("cannot have stdout redirect in stdin redirect state")
-	} else if pair.tokenType == "NORMAL" {
-		*parsed = append(*parsed, Pair{pair.token, "FILE-INPUT"})
-		state = "FILE-INPUT"
-	}
-	return nil
-}
-
-func HandleFileInputState(pair Pair) error {
-	if pair.tokenType == "NORMAL" {
-		*parsed = append(*parsed, Pair{pair.token, "ARGUMENT"})
-		state = "ARGUMENTS"
-	} else if pair.tokenType == "STDIN-REDIRECT" {
-		*parsed = append(*parsed, Pair{pair.token, "STDIN-REDIRECT"})
-		state = "STDIN-REDIRECT"
-	} else if pair.tokenType == "STDOUT-REDIRECT" {
-		*parsed = append(*parsed, Pair{pair.token, "STDOUT-REDIRECT"})
-		state = "STDOUT-REDIRECT"
-	} else {
-		return errors.New("invalid next token")
-	}
-	return nil
-}
-
-// func pipeTest() {
-// 	pr, pw := io.Pipe()
-// 	go func() {
-// 		pw.Write([]byte("hello"))
-// 		defer pw.Close()
-// 	}
-// 	var buf bytes.Buffer
-// 	io.Copy(&buf, pr)
-
-// 	fmt.Println(buf.String())
-
-// }
