@@ -27,6 +27,7 @@ func MainLoop() {
 		}
 
 		// Handle the execution of the input.
+		containsPipe := strings.Contains(input, "|")
 		lexed, err := Lexer(input)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "ERROR:", err)
@@ -39,9 +40,18 @@ func MainLoop() {
 			continue
 		}
 
-		if err = execCommand(parsed); err != nil {
-			fmt.Fprintln(os.Stderr, "ERROR:", err)
-			continue
+		// If contais a pipe, execute the commands with appropriate functions
+		if containsPipe {
+			pair1, pair2 := SplitOnPipe(parsed)
+			if err = RunPipe(pair1, pair2); err != nil {
+				fmt.Fprintln(os.Stderr, "ERROR:", err)
+				continue
+			}
+		} else {
+			if err = execCommand(parsed); err != nil {
+				fmt.Fprintln(os.Stderr, "ERROR:", err)
+				continue
+			}
 		}
 	}
 }
@@ -87,7 +97,6 @@ func Lexer(input string) (*[]Pair, error) {
 			*lexed = append(*lexed, Pair{s, "NORMAL"})
 		}
 	}
-	// fmt.Println(lexed)
 	return lexed, nil
 }
 

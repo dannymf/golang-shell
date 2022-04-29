@@ -24,20 +24,20 @@ func HandleArgumentsState(parsed *[]Pair, pair Pair, state string) (*[]Pair, str
 	if pair.tokenType == "NORMAL" {
 		*parsed = append(*parsed, Pair{pair.token, "ARGUMENT"})
 		state = "ARGUMENTS" //redundant
-	} else if pair.tokenType == "STDIN-REDIRECT" {
-		*parsed = append(*parsed, Pair{pair.token, "STDIN-REDIRECT"})
-		state = "STDIN-REDIRECT"
-	} else if pair.tokenType == "STDOUT-REDIRECT" {
-		*parsed = append(*parsed, Pair{pair.token, "STDOUT-REDIRECT"})
-		state = "STDOUT-REDIRECT"
+	} else if pair.tokenType == "PIPE" {
+		*parsed = append(*parsed, Pair{pair.token, "PIPE"})
+		state = "PIPE"
 	} else {
 		return nil, "", errors.New("invalid next token")
 	}
 	return parsed, state, nil
-
 }
 
 func HandlePipeState(parsed *[]Pair, pair Pair, state string) (*[]Pair, string, error) {
+
+	*parsed = append(*parsed, Pair{pair.token, "PIPE"})
+
+	state = "COMMAND"
 
 	return parsed, state, nil
 }
