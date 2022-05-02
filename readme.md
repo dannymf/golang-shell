@@ -1,18 +1,29 @@
 # COS316 Final Assignment: Recreating a Shell
 
-## API:
+## API
+The code implements the following API
+
 ```go
-// insert comment here
-func execInput()
+type Pair struct {
+	token, tokenType string
+}
+
+// Split the input into standard and special tokens
+func Lexer(input string) (*[]Pair, error)
+
+// Parse the command and arguments into a list of tokens.
+// Return the command and the arguments.
+func Parser(lexed *[]Pair) (*[]Pair, error)
+
+// Execute the parsed command
+func ExecCommand(parsed *[]Pair) error
 
 ```
 
-Handles redirect from StdIn, redirect from StdOut, Pipes, cd, exit, signals, 
+The code includes a main client to run the terminal.
 
-First split on pipe, THEN check whether theres multiple redirects bc you can theoretically have piping and multiple redirects in each pipe
+## Functionality:
 
-Do I need to use goroutines/channels?
+The shell handles redirects from StdIn and to Stdout. The code does not support multiple redirect tokens.
 
-First I will implement without pipes
-
-Does NOT allow multiple redirects
+There is also an additional main client (with more limited functionality) that implements the pipe syntax (synchronously).

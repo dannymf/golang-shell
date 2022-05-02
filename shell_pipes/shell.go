@@ -173,26 +173,6 @@ func execCommand(parsed *[]Pair) error {
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
 
-	// Check if parsed has redirects
-	if len(*parsed) > 1 {
-		for idx, pair := range *parsed {
-			if pair.tokenType == "STDIN-REDIRECT" {
-				redirectFile, err := os.Open((*parsed)[idx+1].token)
-				if err != nil {
-					return err
-				}
-				cmd.Stdin = redirectFile
-				defer redirectFile.Close()
-			} else if pair.tokenType == "STDOUT-REDIRECT" {
-				redirectFile, err := os.Create((*parsed)[idx+1].token)
-				if err != nil {
-					return err
-				}
-				cmd.Stdout = redirectFile
-				defer redirectFile.Close()
-			}
-		}
-	}
 	// Run command with args
 	if err := cmd.Run(); err != nil {
 		return err

@@ -39,16 +39,16 @@ func MainLoop() {
 			continue
 		}
 
-		if err = execCommand(parsed); err != nil {
+		if err = ExecCommand(parsed); err != nil {
 			fmt.Fprintln(os.Stderr, "ERROR:", err)
 			continue
 		}
 	}
 }
 
+// Split the input separate the command and the arguments.
+// Return the command and the arguments.
 func Lexer(input string) (*[]Pair, error) {
-	// Split the input separate the command and the arguments.
-	// Return the command and the arguments.
 	var lexed *[]Pair = &[]Pair{}
 	*lexed = make([]Pair, 0)
 
@@ -143,7 +143,7 @@ func Parser(lexed *[]Pair) (*[]Pair, error) {
 	return parsed, nil
 }
 
-func execCommand(parsed *[]Pair) error {
+func ExecCommand(parsed *[]Pair) error {
 
 	if len(*parsed) == 0 {
 		return nil
