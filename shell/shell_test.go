@@ -40,10 +40,6 @@ func TestLexer(testing *testing.T) {
 		if err != nil {
 			testing.Error(err)
 		}
-		// testing.Log(lexed)
-		// for _, pair := range lexed {
-		// 	fmt.Println(pair.token, pair.tokenType)
-		// }
 	}
 
 }
@@ -72,11 +68,6 @@ func TestParser(testing *testing.T) {
 		if err != nil {
 			testing.Error(err)
 		}
-		// testing.Log(parsed)
-		// fmt.Println(*parsed)
-		// for _, pair := range *parsed {
-		// 	fmt.Println(pair.token, pair.tokenType)
-		// }
 	}
 }
 
@@ -91,11 +82,6 @@ func TestParserBad(testing *testing.T) {
 		if err == nil {
 			testing.Error("error expected")
 		}
-		// testing.Log(parsed)
-		// fmt.Println(*parsed)
-		// for _, pair := range *parsed {
-		// 	fmt.Println(pair.token, pair.tokenType)
-		// }
 	}
 }
 
@@ -109,8 +95,6 @@ func TestShellOutput(testing *testing.T) {
 	if err != nil {
 		testing.Error(err)
 	}
-	// testing.Log(parsed)
-	// fmt.Println(*parsed)
 
 	cmd, err := ReturnCommand(parsed)
 
@@ -132,7 +116,6 @@ func TestShellOutput(testing *testing.T) {
 
 // Test cat command; file should not exist
 func TestShellOutput2(testing *testing.T) {
-	// for _, testString := range testStringsGood {
 	lexed, err := Lexer(badCommand1)
 	if err != nil {
 		testing.Error(err)
@@ -141,8 +124,6 @@ func TestShellOutput2(testing *testing.T) {
 	if err != nil {
 		testing.Error(err)
 	}
-	// testing.Log(parsed)
-	// fmt.Println(*parsed)
 
 	cmd, err := ReturnCommand(parsed)
 
@@ -210,8 +191,6 @@ func TestShellOutput4(testing *testing.T) {
 	if err != nil {
 		testing.Error(err)
 	}
-	// testing.Log(parsed)
-	// fmt.Println(*parsed)
 
 	cmd, err := ReturnCommand(parsed)
 

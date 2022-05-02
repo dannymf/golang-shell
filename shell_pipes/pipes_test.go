@@ -31,7 +31,6 @@ func TestPipes(testing *testing.T) {
 	if err != nil {
 		testing.Error(err)
 	}
-	// defer tempFile.Close()
 
 	var readBytes []byte = make([]byte, 25)
 	tempFile.Read(readBytes)

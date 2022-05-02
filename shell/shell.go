@@ -76,10 +76,6 @@ func Lexer(input string) (*[]Pair, error) {
 		a = append(a, sb.String())
 	}
 
-	// for _, s := range a {
-	// 	fmt.Println(s)
-	// }
-
 	for _, s := range a {
 		if s == "<" {
 			*lexed = append(*lexed, Pair{s, "STDIN-REDIRECT"})

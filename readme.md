@@ -20,7 +20,8 @@ func ExecCommand(parsed *[]Pair) error
 
 ```
 
-The code includes a main client to run the terminal.
+The code includes a main client to run the shell.
+In addition, there is a main client that handles a limited set of pipe commands.
 
 ## Functionality:
 
