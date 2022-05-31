@@ -1,4 +1,4 @@
-# COS316 Final Assignment: Recreating a Shell
+# Recreating a Bash Shell
 
 ## API
 The code implements the following API
